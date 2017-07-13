@@ -1,0 +1,15 @@
+
+HACK WIP FIRST CHECKIN
+
+```
+pushd $BULLET_CHECKOUT
+# hack to include PYTHON_LIBRARY
+./build_cmake_pybullet_double.sh
+popd
+ln -s $BULLET_CHECKOUT/build_cmake/examples/pybullet/pybullet.so
+ln -s $BULLET_CHECKOUT/data
+```
+
+./gather_rollouts.py --agent=greedy > greedy.out
+./replay_rollouts.py < greedy.out > replay.out
+

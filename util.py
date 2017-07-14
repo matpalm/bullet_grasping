@@ -1,7 +1,8 @@
 from PIL import Image
+import json
 import numpy as np
-import pybullet as p
 import os
+import pybullet as p
 
 W = 160
 H = 120
@@ -31,13 +32,31 @@ def render_two_cameras():
   return np.stack([render_camera(yaw=149, pitch=-53),
                    render_camera(yaw=30, pitch=-42)])
 
-def dump_state_as_img(state, run, episode, step, base_dir="logs"):
+def dump_state_as_img(state, base_dir):
+  # TODO: fold into log_step? not used elsewhere...
   N, H, W, C = state.shape
   assert C == 3
   composite = Image.new('RGB', (N*W, H), (0,0,0))
   for i in range(N):
     composite.paste(Image.fromarray(state[i]), (i*W, 0))
   directory = "%s/%s/%03d/" % (base_dir, run, episode)
-  if not os.path.exists(directory):
-    os.makedirs(directory)
   composite.save("%s/%03d.png" % (directory, step))
+
+class Log(object):
+  def __init__(self, directory):
+    self.directory = "logs/" + directory
+    if not os.path.exists(self.directory):
+      os.makedirs(self.directory)
+    self.episode_log = open(self.directory + "/log.json", "w")
+    
+  def append(self, episode, step, state, action, reward, info):
+    episode_directory = "%s/e%04d/" % (self.directory, episode)
+    if not os.path.exists(episode_directory):
+      os.makedirs(episode_directory)
+    Image.fromarray(state[0]).save("%s/0_%03d.png" % (episode_directory, step))
+    Image.fromarray(state[1]).save("%s/1_%03d.png" % (episode_directory, step))
+    record = json.dumps({"e": episode, "s": step, "action": list(action),
+                         "reward": reward, "info": info})
+#    print record
+    self.episode_log.write("%s\n" % record)
+    self.episode_log.flush()

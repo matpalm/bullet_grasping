@@ -22,10 +22,10 @@ class GraspEnv(gym.Env):
     self.kuka = kuka.Kuka()
     self.action_space = spaces.Box(-1, 1, shape=(7,))
 
-  def reset_target(self, target_pos, target_orient):
-    self.target_pos = target_pos
-    self.target_orient = target_orient
-    p.resetBasePositionAndOrientation(self.target, target_pos, target_orient)
+  def reset_target(self, pos, orient):
+    self.target_pos = pos
+    self.target_orient = orient
+    p.resetBasePositionAndOrientation(self.target, pos, orient)
 
   def reset_joint_positions(self, positions):
     self.arm_positions = positions
@@ -37,10 +37,8 @@ class GraspEnv(gym.Env):
     self.arm_positions = [ 0.006418, 0.413184, -0.011401, -1.589317, 0.005379, 1.137684, -0.006539 ]
     self.kuka.reset_joint_positions(self.arm_positions)
     # reset target to random pose
-    self.target_pos = np.array([0.52, 0.0, 0.29]) + np.random.normal(
-      scale=TARGET_RANDOM_OFFSET_MU, size=(3,))
-    self.target_orient = np.random.uniform(size=(4,))
-    p.resetBasePositionAndOrientation(self.target, self.target_pos, self.target_orient)
+    self.reset_target(pos=np.array([0.52, 0.0, 0.29]) + np.random.normal(scale=TARGET_RANDOM_OFFSET_MU, size=(3,)),
+                      orient=np.random.uniform(size=(4,)))
     return self.state()
 
   def _reset_arm_positions_to_actual_positions(self):

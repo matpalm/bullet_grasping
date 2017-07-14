@@ -3,6 +3,7 @@ import json
 import numpy as np
 import os
 import pybullet as p
+import sys
 
 W = 160
 H = 120
@@ -43,20 +44,22 @@ def dump_state_as_img(state, base_dir):
   composite.save("%s/%03d.png" % (directory, step))
 
 class Log(object):
-  def __init__(self, directory):
-    self.directory = "logs/" + directory
-    if not os.path.exists(self.directory):
-      os.makedirs(self.directory)
-    self.episode_log = open(self.directory + "/log.json", "w")
-    
+  def __init__(self, base_directory):
+    self.base_directory = "logs/" + base_directory
+    if not os.path.exists(self.base_directory):
+      os.makedirs(self.base_directory)
+
   def append(self, episode, step, state, action, reward, info):
-    episode_directory = "%s/e%04d/" % (self.directory, episode)
+    episode_directory = "%s/e%04d/" % (self.base_directory, episode)
     if not os.path.exists(episode_directory):
       os.makedirs(episode_directory)
     Image.fromarray(state[0]).save("%s/0_%03d.png" % (episode_directory, step))
     Image.fromarray(state[1]).save("%s/1_%03d.png" % (episode_directory, step))
-    record = json.dumps({"e": episode, "s": step, "action": list(action),
-                         "reward": reward, "info": info})
-#    print record
-    self.episode_log.write("%s\n" % record)
-    self.episode_log.flush()
+    log_file = "%s/log.json" % episode_directory
+    if step == 0 and os.path.exists(log_file):
+      print >>sys.stderr, "warning: deleting %s" % log_file
+      os.remove(log_file)
+    with open(log_file, "a") as f:
+      record = json.dumps({"action": list(action), "reward": reward, "info": info, "step": step})
+      f.write("%s\n" % record)
+

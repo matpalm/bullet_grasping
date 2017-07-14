@@ -1,5 +1,11 @@
+# grasping in bullet
 
-HACK WIP FIRST CHECKIN
+a simple environment for playing with hindsight experience replay
+
+```
+# guess at deps...
+pip install gym Pillow
+```
 
 ```
 pushd $BULLET_CHECKOUT
@@ -10,6 +16,29 @@ ln -s $BULLET_CHECKOUT/build_cmake/examples/pybullet/pybullet.so
 ln -s $BULLET_CHECKOUT/data
 ```
 
-./gather_rollouts.py --agent=greedy > greedy.out
-./replay_rollouts.py < greedy.out > replay.out
+some notes re: replaying
+- if the goal at time N is a possible that the arm got to at time M (M<N) then the replayed
+  episode will be over by time M, not the "full" N.
+- the goal possible might put the block in a position where it stops the arm from being able to
+  exactly replay the original trajectory.
+
+e.g.
+
+$ ./gather_rollouts.py --run r1 --agent greedy --max_steps=50 --num_episodes=10
+$ ./replay_rollouts.py --run_in=r1 --run_out=r1r
+$ ./episode_stats.py
+logs/r1/e0000	     47	0.131279656509	1
+logs/r1/e0001	     51	0.372385607001	-1
+logs/r1/e0002	     51	0.280376890883	-1
+logs/r1/e0003	     51	0.382607744899	-1
+logs/r1/e0004	     20	0.139047976545	1
+logs/r1/e0005	     15	0.118885891149	1
+logs/r1/e0006	     51	0.247290959099	-1
+logs/r1/e0007	     6	0.148787217307	1
+logs/r1/e0008	     38	0.13804426467	1
+logs/r1/e0009	     13	0.140594851777	1
+logs/r1r/e0001	     1	0.12247340569	1     # succesful replay!
+logs/r1r/e0002	     28	0.148407100711	1     # succesful replay!
+logs/r1r/e0003	     43	0.149465083211	1     # succesful replay!
+logs/r1r/e0006	     51	0.554541922481	-1    # unsuccesful replay, goal blocks arm
 

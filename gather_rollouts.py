@@ -27,44 +27,54 @@ class RandomAgent(object):
 
   def rollout(self, env, episode):
     state = env.reset()
-    step = 0
+    step_num = 0
     done = False
     while not done:
       action = env.action_space.sample()
       state, reward, done, info = env.step(action)
-      self.log.append(episode, step, state, action, reward, info)
-      step += 1
+      self.log.append(episode, step_num, state, action, reward, info)
+      step_num += 1
 
 class GreedyAgent(object):
   def __init__(self, env, log_directory):
     self.a_idx = 0  # which action idx last changed
     self.actions = np.zeros(7)
     self.log = u.Log(log_directory)
+    self.episode_num = 0
+    self.step_num = 0
+    self.done = False
 
   def pick_new_random_action(self):
     self.actions[self.a_idx] = 0
     self.a_idx = random.randrange(0, 7)
     self.actions[self.a_idx] = -1 if random.random() <= 0.5 else 1
 
-  def rollout(self, env, episode):
+  def step(self):
+    state, reward, self.done, info = env.step(self.actions)
+    self.log.append(self.episode_num, self.step_num, state, self.actions, reward, info)
+    self.step_num += 1
+    return info['distance']
+
+  def rollout(self, env, episode_num):
     env.reset()
+
+    self.actions = np.zeros(7)
+    self.episode_num = episode_num
+    self.step_num = 0
+
     # do nothing once just to bootstrap value for "best distance"
     # note: reward is -1 / 1 and we ignore it and pull distance from info
-    _state, _reward, done, info = env.step(np.zeros(7))
     # TODO: cornerish case of already being "done" at reset....
-    best_distance = info['distance']
+    best_distance = self.step()
+
     # pick a random action idx to start with
     self.pick_new_random_action()
 
-    step = 0
     while True:
-      # try action
-      state, reward, done, info = env.step(self.actions)
-      self.log.append(episode, step, state, self.actions, reward, info)
-      if done: return
-      step += 1
+      # try latest action
+      distance = self.step()
+      if self.done: return
 
-      distance = info['distance']
       if distance < best_distance - 1e-3:
         # if distance is better than best_distance we keep this action
         # ( add margin of 1e-2 since joint limits may mean we make
@@ -74,15 +84,11 @@ class GreedyAgent(object):
         # rollback latest step by taking a step back in opposite
         # direction before deciding new action for next time
         self.actions[self.a_idx] *= -1
-        state, reward, done, info = env.step(self.actions)
-        self.log.append(episode, step, state, self.actions, reward, info)
-
+        distance = self.step()
+        if self.done: return
         # sanity check reversing actually _did_ get us back to best
-        distance = info['distance']
-        assert np.isclose(distance, best_distance, atol=0.1)
-        self.log.append(episode, step, state, self.actions, reward, info)
-        if done: return
-        step += 1
+        if not np.isclose(distance, best_distance, atol=0.1):
+          print "warning! rollback didn't work... %s %s" % (distance, best_distance)
         # try something else next time
         self.pick_new_random_action()
 
